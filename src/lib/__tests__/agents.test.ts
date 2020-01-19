@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { Agent, decodeInvitationFromUrl, InboundTransporter, OutboundTransporter } from '..';
 import { toBeConnectedWith } from '../testUtils';
 import { OutboundPackage, WireMessage } from '../types';
+import { CustomBasicMessage } from '../protocols/basicmessage/BasicMessageRepository';
 
 jest.setTimeout(10000);
 
@@ -89,13 +90,13 @@ describe('agents', () => {
     const bobMessages = await poll(
       () => {
         console.log(`Getting Bob's connection messages...`);
-        const connections = bobAgent.getConnections();
-        return connections[0].messages;
+        return bobAgent.getBasicMessages();
       },
       (messages: WireMessage[]) => messages.length < 1
     );
     console.log(bobMessages);
-    expect(bobMessages[0].content).toBe(message);
+    const receivedMessage = bobMessages.filter((msg: CustomBasicMessage) => msg.role === 'receiver')[0];
+    expect(receivedMessage.message.content).toBe(message);
   });
 });
 

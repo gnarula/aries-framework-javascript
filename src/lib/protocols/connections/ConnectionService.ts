@@ -10,6 +10,7 @@ import { createOutboundMessage } from '../helpers';
 import { Connection } from './domain/Connection';
 import { ConnectionState } from './domain/ConnectionState';
 import { DidDoc, Service, PublicKey, PublicKeyType } from './domain/DidDoc';
+import { createTrustPingMessage } from '../trustping/messages';
 
 class ConnectionService {
   context: Context;
@@ -83,7 +84,7 @@ class ConnectionService {
 
     validateSenderKey(connection, sender_verkey);
 
-    const response = createAckMessage(message['@id']);
+    const response = createTrustPingMessage();
     connection.updateState(ConnectionState.COMPLETE);
     return createOutboundMessage(connection, response);
   }

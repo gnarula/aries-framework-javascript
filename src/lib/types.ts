@@ -46,3 +46,14 @@ export interface InboundConnection {
   verkey: Verkey;
   connection: Connection;
 }
+
+export enum AgentEventType {
+  CONNECTION_ESTABLISHED = 'connection_established',
+  BASICMESSAGE_RECEIVED = 'basicmessage_received',
+  // ... TODO: add more event types as we see fit
+}
+
+export interface AgentEvent {
+  message: {};
+  // TODO: event metadata can go in here
+}

@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import logger from '../logger';
 import { InitConfig } from '../types';
 import { encodeInvitationToUrl, decodeInvitationFromUrl } from '../helpers';
@@ -39,6 +40,7 @@ export class Agent {
   consumerRoutingService: ConsumerRoutingService;
   trustPingService: TrustPingService;
   handlers: { [key: string]: Handler } = {};
+  eventEmitter: EventEmitter;
 
   constructor(config: InitConfig, inboundTransporter: InboundTransporter, outboundTransporter: OutboundTransporter) {
     logger.logJson('Creating agent with config', config);
@@ -47,18 +49,20 @@ export class Agent {
     const messageSender = new MessageSender(wallet, outboundTransporter);
 
     this.inboundTransporter = inboundTransporter;
+    this.eventEmitter = new EventEmitter();
 
     this.context = {
       config,
       wallet,
       messageSender,
+      eventEmitter: this.eventEmitter,
     };
 
     this.connectionService = new ConnectionService(this.context);
-    this.basicMessageService = new BasicMessageService();
+    this.basicMessageService = new BasicMessageService(this.context);
     this.providerRoutingService = new ProviderRoutingService();
     this.consumerRoutingService = new ConsumerRoutingService(this.context);
-    this.trustPingService = new TrustPingService();
+    this.trustPingService = new TrustPingService(this.context);
 
     this.registerHandlers();
 
@@ -170,5 +174,9 @@ export class Agent {
     };
 
     this.handlers = handlers;
+  }
+
+  getEventEmitter(): EventEmitter {
+    return this.eventEmitter;
   }
 }

@@ -10,6 +10,7 @@ import { createOutboundMessage } from '../helpers';
 import { Connection } from './domain/Connection';
 import { ConnectionState } from './domain/ConnectionState';
 import { createTrustPingMessage } from '../trustping/messages';
+import { AgentEventType } from '../../types';
 
 class ConnectionService {
   context: Context;
@@ -85,6 +86,9 @@ class ConnectionService {
 
     const response = createTrustPingMessage();
     connection.updateState(ConnectionState.COMPLETE);
+    this.context.eventEmitter.emit(AgentEventType.CONNECTION_ESTABLISHED, {
+      message: { connection },
+    });
     return createOutboundMessage(connection, response);
   }
 

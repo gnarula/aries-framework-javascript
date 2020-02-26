@@ -55,10 +55,10 @@ export class Agent {
     indy: Indy
   ) {
     logger.logJson('Creating agent with config', config);
-    this.eventEmitter = new EventEmitter();
 
     const wallet = new IndyWallet(config.walletConfig, config.walletCredentials, indy);
     const messageSender = new MessageSender(wallet, outboundTransporter);
+    const eventEmitter = new EventEmitter();
 
     this.inboundTransporter = inboundTransporter;
 
@@ -66,6 +66,7 @@ export class Agent {
       config,
       wallet,
       messageSender,
+      eventEmitter,
     };
 
     const storageService = new IndyStorageService(wallet);
@@ -82,7 +83,7 @@ export class Agent {
     this.registerHandlers();
 
     const dispatcher = new Dispatcher(this.handlers, messageSender);
-    this.messageReceiver = new MessageReceiver(config, wallet, dispatcher, this.eventEmitter);
+    this.messageReceiver = new MessageReceiver(this.context, dispatcher);
   }
 
   async init() {

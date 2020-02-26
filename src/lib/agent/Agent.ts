@@ -46,7 +46,6 @@ export class Agent {
   handlers: { [key: string]: Handler } = {};
   basicMessageRepository: Repository<BasicMessageRecord>;
   connectionRepository: Repository<ConnectionRecord>;
-  eventEmitter: EventEmitter;
 
   constructor(
     config: InitConfig,
@@ -78,7 +77,7 @@ export class Agent {
     this.basicMessageService = new BasicMessageService(this.basicMessageRepository);
     this.providerRoutingService = new ProviderRoutingService();
     this.consumerRoutingService = new ConsumerRoutingService(this.context);
-    this.trustPingService = new TrustPingService();
+    this.trustPingService = new TrustPingService(this.context);
 
     this.registerHandlers();
 

@@ -4,6 +4,7 @@ import { Dispatcher } from './Dispatcher';
 import { Wallet } from '../wallet/Wallet';
 import { InitConfig } from '../types';
 import { Event } from './events';
+import { Context } from './Context';
 
 class MessageReceiver {
   config: InitConfig;
@@ -11,11 +12,11 @@ class MessageReceiver {
   dispatcher: Dispatcher;
   eventEmitter: EventEmitter;
 
-  constructor(config: InitConfig, wallet: Wallet, dispatcher: Dispatcher, eventEmitter: EventEmitter) {
-    this.config = config;
-    this.wallet = wallet;
+  constructor(context: Context, dispatcher: Dispatcher) {
+    this.config = context.config;
+    this.wallet = context.wallet;
     this.dispatcher = dispatcher;
-    this.eventEmitter = eventEmitter;
+    this.eventEmitter = context.eventEmitter;
   }
 
   async receiveMessage(inboundPackedMessage: any) {

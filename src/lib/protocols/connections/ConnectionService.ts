@@ -11,6 +11,7 @@ import { Connection } from './domain/Connection';
 import { ConnectionState } from './domain/ConnectionState';
 import { DidDoc, Service, PublicKey, PublicKeyType, Authentication } from './domain/DidDoc';
 import { createTrustPingMessage } from '../trustping/messages';
+import { Event } from '../../agent/events';
 
 class ConnectionService {
   context: Context;
@@ -86,6 +87,7 @@ class ConnectionService {
 
     const response = createTrustPingMessage();
     connection.updateState(ConnectionState.COMPLETE);
+    this.context.eventEmitter.emit(Event.CONNECTION_ESTABLISHED, connection);
     return createOutboundMessage(connection, response);
   }
 

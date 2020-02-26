@@ -1,17 +1,21 @@
+import { EventEmitter } from 'events';
 import logger from '../logger';
 import { Dispatcher } from './Dispatcher';
 import { Wallet } from '../wallet/Wallet';
 import { InitConfig } from '../types';
+import { Event } from './events';
 
 class MessageReceiver {
   config: InitConfig;
   wallet: Wallet;
   dispatcher: Dispatcher;
+  eventEmitter: EventEmitter;
 
-  constructor(config: InitConfig, wallet: Wallet, dispatcher: Dispatcher) {
+  constructor(config: InitConfig, wallet: Wallet, dispatcher: Dispatcher, eventEmitter: EventEmitter) {
     this.config = config;
     this.wallet = wallet;
     this.dispatcher = dispatcher;
+    this.eventEmitter = eventEmitter;
   }
 
   async receiveMessage(inboundPackedMessage: any) {
@@ -34,7 +38,9 @@ class MessageReceiver {
     }
 
     logger.logJson('inboundMessage', inboundMessage);
-    return await this.dispatcher.dispatch(inboundMessage);
+    const result = await this.dispatcher.dispatch(inboundMessage);
+    this.eventEmitter.emit(Event.MESSAGE_RECEIVED, inboundMessage);
+    return result;
   }
 }
 

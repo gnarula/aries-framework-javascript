@@ -95,6 +95,14 @@ export class IndyWallet implements Wallet {
     };
   }
 
+  async signBuffer(data: Buffer, did: Did) {
+    if (!this.wh) {
+      throw Error('Wallet has not been initialized yet');
+    }
+    const signerVk = await this.keyForLocalDid(did);
+    return this.indy.cryptoSign(this.wh, signerVk, data);
+  }
+
   async sign(message: Message, attribute: string, verkey: Verkey) {
     if (!this.wh) {
       throw Error('Wallet has not been initialized yet');

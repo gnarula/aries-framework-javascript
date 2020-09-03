@@ -31,6 +31,24 @@ export class LedgerService {
     this.poolHandle = await this.indy.openPoolLedger(poolName);
   }
 
+  public async getEndpoint(did: Did) {
+    if (!this.poolHandle) {
+      throw new Error('Pool has not been initialized');
+    }
+    const request = await this.indy.buildGetAttribRequest(null, did, 'endpoint', null, null);
+    logger.log('Attrib Request', request);
+
+    const response = await this.indy.submitRequest(this.poolHandle, request);
+    logger.log('response', response);
+
+    if (response.result.data == null) {
+      throw new Error('endpoint not found on ledger');
+    }
+
+    const endpoint = JSON.parse(response.result.data as string)
+    return endpoint.endpoint.endpoint;
+  }
+
   public async getPublicDid(did: Did) {
     if (!this.poolHandle) {
       throw new Error('Pool has not been initialized.');

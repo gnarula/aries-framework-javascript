@@ -37,6 +37,10 @@ import { ConnectionsModule } from '../modules/ConnectionsModule';
 import { RoutingModule } from '../modules/RoutingModule';
 import { BasicMessagesModule } from '../modules/BasicMessagesModule';
 import { LedgerModule } from '../modules/LedgerModule';
+import { ConnectionInvitationMessage } from '../protocols/connections/ConnectionInvitationMessage';
+import { ExchangeService } from '../protocols/didexchange/ExchangeService';
+import { ExchangeResponseMessage } from '../protocols/didexchange/ExchangeResponseMessage';
+import { ExchangeResponseHandler } from '../handlers/didexchange/ExchangeResponseHandler';
 
 export class Agent {
   protected wallet: Wallet;
@@ -55,6 +59,7 @@ export class Agent {
   protected basicMessageRepository: Repository<BasicMessageRecord>;
   protected connectionRepository: Repository<ConnectionRecord>;
   protected provisioningRepository: Repository<ProvisioningRecord>;
+  protected didexchangeService: ExchangeService;
 
   public inboundTransporter: InboundTransporter;
 
@@ -92,6 +97,7 @@ export class Agent {
     this.trustPingService = new TrustPingService();
     this.messagePickupService = new MessagePickupService(messageRepository);
     this.ledgerService = new LedgerService(this.wallet, indy);
+    this.didexchangeService = new ExchangeService(this.wallet, this.agentConfig, this.connectionRepository, this.ledgerService);
 
     this.messageReceiver = new MessageReceiver(
       this.agentConfig,
@@ -128,6 +134,17 @@ export class Agent {
     return await this.messageReceiver.receiveMessage(inboundPackedMessage);
   }
 
+  public async acceptInvite(invite: ConnectionInvitationMessage) {
+    const request = await this.didexchangeService.acceptInvitation(invite)
+    return await this.messageSender.sendMessage(request);
+  }
+
+  public async acceptInviteWithPublicDID(invite: ConnectionInvitationMessage) {
+    const did = `did:sov:${this.getPublicDid()!.did}`;
+    const request = await this.didexchangeService.acceptInvitation(invite, did)
+    return await this.messageSender.sendMessage(request);
+  }
+
   public async closeAndDeleteWallet() {
     await this.wallet.close();
     await this.wallet.delete();
@@ -144,6 +161,7 @@ export class Agent {
     this.dispatcher.registerHandler(new TrustPingMessageHandler(this.trustPingService, this.connectionService));
     this.dispatcher.registerHandler(new TrustPingResponseMessageHandler(this.trustPingService));
     this.dispatcher.registerHandler(new MessagePickupHandler(this.messagePickupService));
+    this.dispatcher.registerHandler(new ExchangeResponseHandler(this.didexchangeService));
   }
 
   protected registerModules() {

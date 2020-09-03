@@ -74,6 +74,7 @@ declare module 'indy-sdk' {
       timeOfAcceptance: number
     ): Promise<LedgerRequest>;
     abbreviateVerkey(did: Did, fullVerkey: Verkey): Promise<Verkey>;
+    buildGetAttribRequest(submittedDid: Did | null, targetDid: Did, raw: string | null, hash: string | null, enc: string | null): Promise<LedgerRequest>
   }
 }
 
@@ -151,6 +152,7 @@ interface Indy {
     timeOfAcceptance: number
   ): Promise<LedgerRequest>;
   abbreviateVerkey(did: Did, fullVerkey: Verkey): Promise<Verkey>;
+  buildGetAttribRequest(submittedDid: Did | null, targetDid: Did, raw: string | null, hash: string | null, enc: string | null): Promise<LedgerRequest>
 }
 
 type WalletHandle = number;

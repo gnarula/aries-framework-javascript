@@ -18,14 +18,21 @@ export async function unpackAndVerifySignatureDecorator(
 ): Promise<unknown> {
   const signerVerkey = decorator.signer;
 
-  // first 8 bytes are for 64 bit integer from unix epoch
+  return unpackAndVerifySignatureDecoratorWithKey(decorator, signerVerkey, wallet);
+}
+
+export async function unpackAndVerifySignatureDecoratorWithKey(
+  decorator: SignatureDecorator,
+  key: Verkey,
+  wallet: Wallet
+): Promise<unknown> {
   const signedData = base64url.toBuffer(decorator.signatureData);
   const signature = base64url.toBuffer(decorator.signature);
 
-  const isValid = await wallet.verify(signerVerkey, signedData, signature);
+  const isValid = await wallet.verify(key, signedData, signature);
 
   if (!isValid) {
-    throw new Error('Signature is not valid!');
+    throw new Error('Signature is not valid');
   }
 
   return JSON.parse(signedData.slice(8).toString('utf-8'));

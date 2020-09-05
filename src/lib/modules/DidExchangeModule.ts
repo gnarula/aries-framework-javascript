@@ -2,6 +2,7 @@ import { EventEmitter } from 'events'
 import { ExchangeService } from "../protocols/didexchange/ExchangeService";
 import { ConnectionInvitationMessage } from "../protocols/connections/ConnectionInvitationMessage";
 import { MessageSender } from "../agent/MessageSender";
+import { ConnectionRecord } from '../storage/ConnectionRecord';
 
 export class DidExchangeModule {
     private exchangeService: ExchangeService;
@@ -26,6 +27,14 @@ export class DidExchangeModule {
         const did = `did:sov:${this.publicDid}`;
         const request = await this.exchangeService.acceptInvitation(invite, did)
         return await this.messageSender.sendMessage(request);
+    }
+
+    public async findByTheirDid(theirDid: Did): Promise<ConnectionRecord | null> {
+        return this.exchangeService.findByTheirDid(theirDid);
+    }
+
+    public async find(connectionId: string): Promise<ConnectionRecord | null> {
+        return this.exchangeService.find(connectionId);
     }
 
     public events(): EventEmitter {

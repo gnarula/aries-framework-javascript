@@ -26,7 +26,7 @@ enum EventType {
 }
 
 interface StateChangeEvent {
-    theirDid?: string
+    connectionId: string
     state: ConnectionState
 }
 
@@ -172,8 +172,17 @@ class ExchangeService extends EventEmitter {
     public async updateState(connectionRecord: ConnectionRecord, newState: ConnectionState) {
         connectionRecord.state = newState;
         await this.connectionRepository.update(connectionRecord);
-        const { theirDid, state } = connectionRecord;
-        this.emit(EventType.StateChanged, { theirDid, state } as StateChangeEvent)
+        const { id, state } = connectionRecord;
+        this.emit(EventType.StateChanged, { connectionId: id, state } as StateChangeEvent)
+    }
+
+    public async find(connectionId: string): Promise<ConnectionRecord | null> {
+        try {
+            const connection = await this.connectionRepository.find(connectionId);
+            return connection;
+        } catch {
+            return null;
+        }
     }
 
     public async findByTheirDid(theirDid: Did): Promise<ConnectionRecord | null> {

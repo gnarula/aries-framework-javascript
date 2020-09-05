@@ -1,4 +1,5 @@
 import {v4 as uuid } from "uuid";
+import { EventEmitter } from 'events';
 import { Wallet } from "../../wallet/Wallet";
 import { Repository } from "../../storage/Repository";
 import { AgentConfig } from "../../agent/AgentConfig";
@@ -20,7 +21,16 @@ import base58 from 'bs58';
 import logger from "../../logger";
 import { Connection } from "./domain/Connection";
 
-class ExchangeService {
+enum EventType {
+    StateChanged = 'stateChanged'
+}
+
+interface StateChangeEvent {
+    theirDid?: string
+    state: ConnectionState
+}
+
+class ExchangeService extends EventEmitter {
     private wallet: Wallet;
     private config: AgentConfig;
     private connectionRepository: Repository<ConnectionRecord>;
@@ -31,6 +41,7 @@ class ExchangeService {
         config: AgentConfig,
         connectionRepository: Repository<ConnectionRecord>,
         ledgerService: LedgerService) {
+        super();
         this.wallet = wallet;
         this.config = config;
         this.connectionRepository = connectionRepository;
@@ -161,7 +172,18 @@ class ExchangeService {
     public async updateState(connectionRecord: ConnectionRecord, newState: ConnectionState) {
         connectionRecord.state = newState;
         await this.connectionRepository.update(connectionRecord);
+        const { theirDid, state } = connectionRecord;
+        this.emit(EventType.StateChanged, { theirDid, state } as StateChangeEvent)
+    }
+
+    public async findByTheirDid(theirDid: Did): Promise<ConnectionRecord | null> {
+        const connectionRecords = await this.connectionRepository.findByQuery({ theirDid });
+        if (connectionRecords.length < 1) {
+            return null;
+        }
+
+        return connectionRecords[0];
     }
 }
 
-export { ExchangeService }
+export { ExchangeService, EventType, StateChangeEvent}

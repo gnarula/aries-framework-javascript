@@ -41,6 +41,7 @@ import { ConnectionInvitationMessage } from '../protocols/connections/Connection
 import { ExchangeService } from '../protocols/didexchange/ExchangeService';
 import { ExchangeResponseMessage } from '../protocols/didexchange/ExchangeResponseMessage';
 import { ExchangeResponseHandler } from '../handlers/didexchange/ExchangeResponseHandler';
+import { DidExchangeModule } from '../modules/DidExchangeModule';
 
 export class Agent {
   protected wallet: Wallet;
@@ -67,6 +68,7 @@ export class Agent {
   public routing!: RoutingModule;
   public basicMessages!: BasicMessagesModule;
   public ledger!: LedgerModule;
+  public didexchange!: DidExchangeModule;
 
   public constructor(
     initialConfig: InitConfig,
@@ -134,17 +136,6 @@ export class Agent {
     return await this.messageReceiver.receiveMessage(inboundPackedMessage);
   }
 
-  public async acceptInvite(invite: ConnectionInvitationMessage) {
-    const request = await this.didexchangeService.acceptInvitation(invite)
-    return await this.messageSender.sendMessage(request);
-  }
-
-  public async acceptInviteWithPublicDID(invite: ConnectionInvitationMessage) {
-    const did = `did:sov:${this.getPublicDid()!.did}`;
-    const request = await this.didexchangeService.acceptInvitation(invite, did)
-    return await this.messageSender.sendMessage(request);
-  }
-
   public async closeAndDeleteWallet() {
     await this.wallet.close();
     await this.wallet.delete();
@@ -170,6 +161,12 @@ export class Agent {
       this.connectionService,
       this.consumerRoutingService,
       this.messageReceiver
+    );
+
+    this.didexchange = new DidExchangeModule(
+      this.didexchangeService,
+      this.messageSender,
+      this.getPublicDid()?.did,
     );
 
     this.routing = new RoutingModule(

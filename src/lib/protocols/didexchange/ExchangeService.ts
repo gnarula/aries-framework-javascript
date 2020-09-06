@@ -20,6 +20,7 @@ import { validateOrReject } from 'class-validator';
 import base58 from 'bs58';
 import logger from "../../logger";
 import { Connection } from "./domain/Connection";
+import { ConsumerRoutingService } from "../routing/ConsumerRoutingService";
 
 enum EventType {
     StateChanged = 'stateChanged'
@@ -35,17 +36,21 @@ class ExchangeService extends EventEmitter {
     private config: AgentConfig;
     private connectionRepository: Repository<ConnectionRecord>;
     private ledgerService: LedgerService;
+    private consumerRoutingService: ConsumerRoutingService;
 
     public constructor(
         wallet: Wallet,
         config: AgentConfig,
         connectionRepository: Repository<ConnectionRecord>,
-        ledgerService: LedgerService) {
+        ledgerService: LedgerService,
+        consumerRoutingService: ConsumerRoutingService,
+        ) {
         super();
         this.wallet = wallet;
         this.config = config;
         this.connectionRepository = connectionRepository;
         this.ledgerService = ledgerService;
+        this.consumerRoutingService = consumerRoutingService;
     }
 
     private getFullVerkey(identifier: string, verkey: string) {
@@ -64,6 +69,10 @@ class ExchangeService extends EventEmitter {
             invitation.recipientKeys = [this.getFullVerkey(didInfo.did, didInfo.verkey)];
         }
         const connectionRecord = await this.createConnection(did);
+
+        if (this.config.inboundConnection) {
+            await this.consumerRoutingService.createRoute(connectionRecord.verkey);
+        }
         connectionRecord.invitation = invitation;
 
         const exchangeRequest = new ExchangeRequestMessage({

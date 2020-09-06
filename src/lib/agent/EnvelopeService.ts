@@ -16,7 +16,7 @@ class EnvelopeService {
 
     const message = payload.toJSON();
 
-    logger.logJson('outboundMessage', { verkey, theirKey, routingKeys, endpoint, message });
+    logger.logJson('outboundMessage', { verkey, theirKey, recipientKeys, senderVk, routingKeys, endpoint, message });
     let outboundPackedMessage = await this.wallet.pack(message, recipientKeys, senderVk);
 
     if (routingKeys && routingKeys.length > 0) {

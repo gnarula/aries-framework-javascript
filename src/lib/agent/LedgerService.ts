@@ -17,7 +17,7 @@ export class LedgerService {
       logger.log(`Creating pool config with name "${poolName}".`);
       await this.indy.createPoolLedgerConfig(poolName, poolConfig);
     } catch (error) {
-      if (error.message === 'PoolLedgerConfigAlreadyExistsError') {
+      if (error.code === '306') {
         logger.log('PoolLedgerConfigAlreadyExistsError');
       } else {
         throw error;

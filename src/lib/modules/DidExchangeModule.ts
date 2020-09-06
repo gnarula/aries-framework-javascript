@@ -3,16 +3,17 @@ import { ExchangeService } from "../protocols/didexchange/ExchangeService";
 import { ConnectionInvitationMessage } from "../protocols/connections/ConnectionInvitationMessage";
 import { MessageSender } from "../agent/MessageSender";
 import { ConnectionRecord } from '../storage/ConnectionRecord';
+import { Wallet } from '../wallet/Wallet';
 
 export class DidExchangeModule {
     private exchangeService: ExchangeService;
     private messageSender: MessageSender;
-    private publicDid: string
+    private wallet: Wallet
 
-    public constructor(exchangeService: ExchangeService, messageSender: MessageSender, publicDid: string | undefined) {
+    public constructor(exchangeService: ExchangeService, messageSender: MessageSender, wallet: Wallet) {
         this.exchangeService = exchangeService
         this.messageSender = messageSender
-        this.publicDid = publicDid || '';
+        this.wallet = wallet;
     }
 
     public async acceptInvite(invite: ConnectionInvitationMessage) {
@@ -21,10 +22,11 @@ export class DidExchangeModule {
     }
 
     public async acceptInviteWithPublicDID(invite: ConnectionInvitationMessage) {
-        if (this.publicDid === '') {
+        const publicDid = this.wallet.getPublicDid()?.did;
+        if (publicDid === undefined) {
             throw new Error('Public DID not set');
         }
-        const did = `did:sov:${this.publicDid}`;
+        const did = `did:sov:${publicDid}`;
         const request = await this.exchangeService.acceptInvitation(invite, did)
         return await this.messageSender.sendMessage(request);
     }

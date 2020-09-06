@@ -37,9 +37,7 @@ import { ConnectionsModule } from '../modules/ConnectionsModule';
 import { RoutingModule } from '../modules/RoutingModule';
 import { BasicMessagesModule } from '../modules/BasicMessagesModule';
 import { LedgerModule } from '../modules/LedgerModule';
-import { ConnectionInvitationMessage } from '../protocols/connections/ConnectionInvitationMessage';
 import { ExchangeService } from '../protocols/didexchange/ExchangeService';
-import { ExchangeResponseMessage } from '../protocols/didexchange/ExchangeResponseMessage';
 import { ExchangeResponseHandler } from '../handlers/didexchange/ExchangeResponseHandler';
 import { DidExchangeModule } from '../modules/DidExchangeModule';
 
@@ -118,10 +116,10 @@ export class Agent {
     const { publicDidSeed } = this.agentConfig;
     if (publicDidSeed) {
       // If an agent has publicDid it will be used as routing key.
-      this.wallet.initPublicDid({ seed: publicDidSeed });
+      await this.wallet.initPublicDid({ seed: publicDidSeed });
     }
 
-    return this.inboundTransporter.start(this);
+    await this.inboundTransporter.start(this);
   }
 
   public getPublicDid() {
@@ -166,7 +164,7 @@ export class Agent {
     this.didexchange = new DidExchangeModule(
       this.didexchangeService,
       this.messageSender,
-      this.getPublicDid()?.did,
+      this.wallet,
     );
 
     this.routing = new RoutingModule(

@@ -1,6 +1,6 @@
 {
   "name": "aries-framework-javascript",
-  "version": "1.0.8",
+  "version": "1.0.15",
   "license": "Apache-2.0",
   "main": "build/lib/index.js",
   "types": "build/lib/index.d.ts",

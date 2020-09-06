@@ -70,7 +70,7 @@ class ExchangeService extends EventEmitter {
         }
         const connectionRecord = await this.createConnection(did);
 
-        if (this.config.inboundConnection) {
+        if (this.config.inboundConnection && did === undefined) {
             await this.consumerRoutingService.createRoute(connectionRecord.verkey);
         }
         connectionRecord.invitation = invitation;
@@ -100,6 +100,10 @@ class ExchangeService extends EventEmitter {
         );
         const connection = plainToClass(Connection, connectionJson);
         await validateOrReject(connection);
+
+        if (connection.didDoc === undefined) {
+            connection.didDoc = await this.createPublicDIDDoc(connection.did);
+        }
 
         connectionRecord.updateDidExchangeConnection(connection);
 
@@ -136,6 +140,27 @@ class ExchangeService extends EventEmitter {
             state: ConnectionState.INIT,
             tags: { verkey },
         });
+    }
+
+    private async createPublicDIDDoc(did: Did): Promise<DidDoc> {
+        const [_, method, identifier] = did.split(':');
+        if (method != 'sov') {
+            throw new Error(`Non sovrin public DIDs are unsupported at the moment.`);
+        }
+        const verkey = this.getFullVerkey(identifier, (await this.ledgerService.getPublicDid(identifier)).verkey);
+        const endpoint = await this.ledgerService.getEndpoint(identifier);
+
+        const publicKey = new PublicKey(`${did}#1`, PublicKeyType.ED25519_SIG_2018, did, verkey);
+        const service = new Service(
+            `${did};indy`,
+            endpoint,
+            [verkey],
+            this.config.getRoutingKeys(),
+            0,
+            'did-communication',
+        );
+        const auth = new Authentication(publicKey, true);
+        return new DidDoc(did, [auth], [publicKey], [service]);
     }
 
     private async createPublicDIDConnectionRecord(did: Did): Promise<ConnectionRecord> {

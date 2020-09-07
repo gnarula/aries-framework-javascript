@@ -26,6 +26,8 @@ export class IndyWallet implements Wallet {
       logger.log('error', error);
       if (error.indyName && error.indyName === 'WalletAlreadyExistsError') {
         logger.log(error.indyName);
+      } else if(error.code === 203) {
+        logger.log(error.message)
       } else {
         throw error;
       }

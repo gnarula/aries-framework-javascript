@@ -40,6 +40,8 @@ import { LedgerModule } from '../modules/LedgerModule';
 import { ExchangeService } from '../protocols/didexchange/ExchangeService';
 import { ExchangeResponseHandler } from '../handlers/didexchange/ExchangeResponseHandler';
 import { DidExchangeModule } from '../modules/DidExchangeModule';
+import { StorageService } from '../storage/StorageService';
+import { BaseRecord } from '../storage/BaseRecord';
 
 export class Agent {
   protected wallet: Wallet;
@@ -59,6 +61,7 @@ export class Agent {
   protected connectionRepository: Repository<ConnectionRecord>;
   protected provisioningRepository: Repository<ProvisioningRecord>;
   protected didexchangeService: ExchangeService;
+  protected storageService: StorageService<BaseRecord>;
 
   public inboundTransporter: InboundTransporter;
 
@@ -84,10 +87,10 @@ export class Agent {
     this.dispatcher = new Dispatcher(this.messageSender);
     this.inboundTransporter = inboundTransporter;
 
-    const storageService = new IndyStorageService(this.wallet);
-    this.basicMessageRepository = new Repository<BasicMessageRecord>(BasicMessageRecord, storageService);
-    this.connectionRepository = new Repository<ConnectionRecord>(ConnectionRecord, storageService);
-    this.provisioningRepository = new Repository<ProvisioningRecord>(ProvisioningRecord, storageService);
+    this.storageService = new IndyStorageService(this.wallet);
+    this.basicMessageRepository = new Repository<BasicMessageRecord>(BasicMessageRecord, this.storageService);
+    this.connectionRepository = new Repository<ConnectionRecord>(ConnectionRecord, this.storageService);
+    this.provisioningRepository = new Repository<ProvisioningRecord>(ProvisioningRecord, this.storageService);
 
     this.provisioningService = new ProvisioningService(this.provisioningRepository);
     this.connectionService = new ConnectionService(this.wallet, this.agentConfig, this.connectionRepository);

@@ -39,6 +39,10 @@ export class DidExchangeModule {
         return this.exchangeService.find(connectionId);
     }
 
+    public async getAll(): Promise<ConnectionRecord[]> {
+        return this.exchangeService.getAll();
+    }
+
     public events(): EventEmitter {
         return this.exchangeService
     }

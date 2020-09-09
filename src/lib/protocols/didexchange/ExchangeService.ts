@@ -155,7 +155,7 @@ class ExchangeService extends EventEmitter {
             `${did};indy`,
             endpoint,
             [verkey],
-            this.config.getRoutingKeys(),
+            [],
             0,
             'did-communication',
         );
@@ -208,6 +208,10 @@ class ExchangeService extends EventEmitter {
         await this.connectionRepository.update(connectionRecord);
         const { id, state } = connectionRecord;
         this.emit(EventType.StateChanged, { connectionId: id, state } as StateChangeEvent)
+    }
+
+    public async getAll() {
+        return this.connectionRepository.findAll();
     }
 
     public async find(connectionId: string): Promise<ConnectionRecord | null> {

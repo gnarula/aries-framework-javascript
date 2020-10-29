@@ -8,6 +8,7 @@ import { ConnectionService, EventType } from './ConnectionService';
 import { ConnectionRecord } from '../../storage/ConnectionRecord';
 import { AgentConfig } from '../../agent/AgentConfig';
 import { ConnectionState } from './domain/ConnectionState';
+import { LedgerService } from '../../agent/LedgerService';
 
 describe('ConnectionService', () => {
   const walletConfig = { id: 'test-wallet' + '-ConnectionServiceTest' };
@@ -32,10 +33,12 @@ describe('ConnectionService', () => {
   describe('createConnectionWithInvitation', () => {
     let connectionRepository: Repository<ConnectionRecord>;
     let connectionService: ConnectionService;
+    let ledgerService: LedgerService;
 
     beforeEach(() => {
       connectionRepository = new Repository<ConnectionRecord>(ConnectionRecord, storageService);
-      connectionService = new ConnectionService(wallet, agentConfig, connectionRepository);
+      ledgerService = new LedgerService(wallet, indy);
+      connectionService = new ConnectionService(wallet, agentConfig, connectionRepository, ledgerService);
     });
 
     it('returns connection record with invitation', async () => {

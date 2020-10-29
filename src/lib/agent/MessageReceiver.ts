@@ -50,7 +50,7 @@ class MessageReceiver {
     if (senderKey && unpackedMessage.recipient_verkey) {
       // TODO: only attach if theirKey is present. Otherwise a connection that may not be complete, validated or correct will
       // be attached to the message context. See #76
-      connection = (await this.connectionService.findByVerkey(unpackedMessage.recipient_verkey)) || undefined;
+      connection = (await this.connectionService.findByKeys(unpackedMessage.recipient_verkey, senderKey)) || undefined;
 
       // We check whether the sender key is the same as the key we have stored in the connection
       // otherwise everyone could send messages to our key and we would just accept

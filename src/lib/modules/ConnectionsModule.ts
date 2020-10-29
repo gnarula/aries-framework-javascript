@@ -8,23 +8,32 @@ import { ConsumerRoutingService } from '../protocols/routing/ConsumerRoutingServ
 import { MessageReceiver } from '../agent/MessageReceiver';
 import { ConnectionRecord } from '../storage/ConnectionRecord';
 import { ConnectionState } from '../protocols/connections/domain/ConnectionState';
+import { ConnectionInvitationMessage } from '../protocols/connections/ConnectionInvitationMessage';
+import { Wallet } from '../wallet/Wallet';
+import { MessageSender } from '../agent/MessageSender';
 
 export class ConnectionsModule {
   private agentConfig: AgentConfig;
   private connectionService: ConnectionService;
   private consumerRoutingService: ConsumerRoutingService;
   private messageReceiver: MessageReceiver;
+  private messageSender: MessageSender;
+  private wallet: Wallet;
 
   public constructor(
     agentConfig: AgentConfig,
     connectionService: ConnectionService,
     consumerRoutingService: ConsumerRoutingService,
-    messageReceiver: MessageReceiver
+    messageReceiver: MessageReceiver,
+    messageSender: MessageSender,
+    wallet: Wallet
   ) {
     this.agentConfig = agentConfig;
     this.connectionService = connectionService;
     this.consumerRoutingService = consumerRoutingService;
     this.messageReceiver = messageReceiver;
+    this.messageSender = messageSender;
+    this.wallet = wallet;
   }
 
   public async createConnection() {
@@ -41,6 +50,16 @@ export class ConnectionsModule {
     }
 
     return { invitation, connection };
+  }
+
+  public async acceptInviteWithPublicDID(invite: ConnectionInvitationMessage) {
+    const publicDid = this.wallet.getPublicDid()?.did;
+    if (publicDid === undefined) {
+      throw new Error('Public DID not set');
+    }
+    const did = `did:sov:${publicDid}`;
+    const request = await this.connectionService.acceptInvitation(invite, did);
+    return await this.messageSender.sendMessage(request);
   }
 
   public async acceptInvitation(invitation: unknown) {

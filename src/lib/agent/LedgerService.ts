@@ -45,7 +45,7 @@ export class LedgerService {
       throw new Error('endpoint not found on ledger');
     }
 
-    const endpoint = JSON.parse(response.result.data as string)
+    const endpoint = JSON.parse(response.result.data as string);
     return endpoint.endpoint.endpoint;
   }
 

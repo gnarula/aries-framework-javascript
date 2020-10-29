@@ -68,6 +68,8 @@ export class Agent {
   protected provisioningRepository: Repository<ProvisioningRecord>;
   protected didexchangeService: ExchangeService;
   protected storageService: StorageService<BaseRecord>;
+  protected credentialRepository: Repository<CredentialRecord>;
+  protected credentialService: CredentialService;
 
   public inboundTransporter: InboundTransporter;
 
@@ -76,6 +78,7 @@ export class Agent {
   public basicMessages!: BasicMessagesModule;
   public ledger!: LedgerModule;
   public didexchange!: DidExchangeModule;
+  public credentials!: CredentialsModule;
 
   public constructor(
     initialConfig: InitConfig,
@@ -97,16 +100,29 @@ export class Agent {
     this.basicMessageRepository = new Repository<BasicMessageRecord>(BasicMessageRecord, this.storageService);
     this.connectionRepository = new Repository<ConnectionRecord>(ConnectionRecord, this.storageService);
     this.provisioningRepository = new Repository<ProvisioningRecord>(ProvisioningRecord, this.storageService);
+    this.credentialRepository = new Repository<CredentialRecord>(CredentialRecord, this.storageService);
 
     this.provisioningService = new ProvisioningService(this.provisioningRepository);
-    this.connectionService = new ConnectionService(this.wallet, this.agentConfig, this.connectionRepository);
     this.basicMessageService = new BasicMessageService(this.basicMessageRepository);
     this.providerRoutingService = new ProviderRoutingService();
     this.consumerRoutingService = new ConsumerRoutingService(this.messageSender, this.agentConfig);
     this.trustPingService = new TrustPingService();
     this.messagePickupService = new MessagePickupService(messageRepository);
     this.ledgerService = new LedgerService(this.wallet, indy);
-    this.didexchangeService = new ExchangeService(this.wallet, this.agentConfig, this.connectionRepository, this.ledgerService, this.consumerRoutingService);
+    this.didexchangeService = new ExchangeService(
+      this.wallet,
+      this.agentConfig,
+      this.connectionRepository,
+      this.ledgerService,
+      this.consumerRoutingService
+    );
+    this.credentialService = new CredentialService(this.wallet, this.credentialRepository);
+    this.connectionService = new ConnectionService(
+      this.wallet,
+      this.agentConfig,
+      this.connectionRepository,
+      this.ledgerService
+    );
 
     this.messageReceiver = new MessageReceiver(
       this.agentConfig,
@@ -170,14 +186,12 @@ export class Agent {
       this.agentConfig,
       this.connectionService,
       this.consumerRoutingService,
-      this.messageReceiver
+      this.messageReceiver,
+      this.messageSender,
+      this.wallet
     );
 
-    this.didexchange = new DidExchangeModule(
-      this.didexchangeService,
-      this.messageSender,
-      this.wallet,
-    );
+    this.didexchange = new DidExchangeModule(this.didexchangeService, this.messageSender, this.wallet);
 
     this.routing = new RoutingModule(
       this.agentConfig,

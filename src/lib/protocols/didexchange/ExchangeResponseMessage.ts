@@ -7,8 +7,8 @@ import { SignatureDecorator } from '../../decorators/signature/SignatureDecorato
 
 export interface ExchangeResponseMessageOptions {
   id?: string;
-  connectionSig: SignatureDecorator
-  threadId: string
+  connectionSig: SignatureDecorator;
+  threadId: string;
 }
 
 /**
@@ -27,7 +27,7 @@ export class ExchangeResponseMessage extends AgentMessage {
       this.id = options.id || this.generateId();
       this.connectionSig = options.connectionSig;
 
-      this.setThread({ threadId: options.threadId })
+      this.setThread({ threadId: options.threadId });
     }
   }
 

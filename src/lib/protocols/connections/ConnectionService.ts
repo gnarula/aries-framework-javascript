@@ -9,7 +9,7 @@ import { ConnectionRecord } from '../../storage/ConnectionRecord';
 import { Repository } from '../../storage/Repository';
 import { Wallet } from '../../wallet/Wallet';
 import { TrustPingMessage } from '../trustping/TrustPingMessage';
-import { ConnectionInvitationMessage } from './ConnectionInvitationMessage';
+import { ConnectionInvitationMessage, DIDInvitationData } from './ConnectionInvitationMessage';
 import { ConnectionRequestMessage } from './ConnectionRequestMessage';
 import { ConnectionResponseMessage } from './ConnectionResponseMessage';
 import { signData, unpackAndVerifySignatureDecorator } from '../../decorators/signature/SignatureDecoratorUtils';
@@ -18,6 +18,9 @@ import { classToPlain, plainToClass } from 'class-transformer';
 import { validateOrReject } from 'class-validator';
 import { AckMessage } from './AckMessage';
 import { InboundMessageContext } from '../../agent/models/InboundMessageContext';
+import { LedgerService } from '../../agent/LedgerService';
+import base58 from 'bs58';
+import logger from '../../logger';
 
 enum EventType {
   StateChanged = 'stateChanged',
@@ -26,12 +29,19 @@ enum EventType {
 class ConnectionService extends EventEmitter {
   private wallet: Wallet;
   private config: AgentConfig;
+  private ledgerService: LedgerService;
   private connectionRepository: Repository<ConnectionRecord>;
 
-  public constructor(wallet: Wallet, config: AgentConfig, connectionRepository: Repository<ConnectionRecord>) {
+  public constructor(
+    wallet: Wallet,
+    config: AgentConfig,
+    connectionRepository: Repository<ConnectionRecord>,
+    ledgerService: LedgerService
+  ) {
     super();
     this.wallet = wallet;
     this.config = config;
+    this.ledgerService = ledgerService;
     this.connectionRepository = connectionRepository;
   }
 
@@ -49,10 +59,33 @@ class ConnectionService extends EventEmitter {
     return { invitation, connection: connectionRecord };
   }
 
+  private getFullVerkey(identifier: string, verkey: string) {
+    const identifierBuffer = base58.decode(identifier);
+    const verkeyBuffer = base58.decode(verkey.substring(1));
+    return base58.encode(Buffer.concat([identifierBuffer, verkeyBuffer]));
+  }
+
   public async acceptInvitation(
-    invitation: ConnectionInvitationMessage
+    invitation: ConnectionInvitationMessage,
+    did?: Did
   ): Promise<OutboundMessage<ConnectionRequestMessage>> {
-    const connectionRecord = await this.createConnection();
+    if ((invitation as DIDInvitationData).did !== undefined) {
+      const [_, method, identifier] = (invitation as DIDInvitationData).did.split(':');
+      const didInfo = await this.ledgerService.getPublicDid(identifier);
+      logger.log(`did: ${didInfo.did} verkey: ${didInfo.verkey}`);
+      const endpoint = await this.ledgerService.getEndpoint(identifier);
+      invitation.serviceEndpoint = endpoint;
+      invitation.recipientKeys = [this.getFullVerkey(didInfo.did, didInfo.verkey)];
+    }
+    const connectionRecord = await this.createConnection(did);
+
+    if (invitation.recipientKeys && invitation.recipientKeys.length > 0) {
+      connectionRecord.tags = {
+        ...connectionRecord.tags,
+        invitationKey: invitation.recipientKeys[0],
+        theirKey: invitation.recipientKeys[0],
+      };
+    }
 
     const connectionRequest = new ConnectionRequestMessage({
       label: this.config.label,
@@ -140,16 +173,9 @@ class ConnectionService extends EventEmitter {
     }
   }
 
-  public async updateState(connectionRecord: ConnectionRecord, newState: ConnectionState) {
-    connectionRecord.state = newState;
-    await this.connectionRepository.update(connectionRecord);
-    const { verkey, state } = connectionRecord;
-    this.emit(EventType.StateChanged, { verkey, newState: state });
-  }
-
-  private async createConnection(): Promise<ConnectionRecord> {
+  private async createPeerDIDConnection(): Promise<ConnectionRecord> {
     const id = uuid();
-    const [did, verkey] = await this.wallet.createDid({ method_name: 'sov' });
+    const [did, verkey] = await this.wallet.createDid({ method_name: 'peer' });
     const publicKey = new PublicKey(`${did}#1`, PublicKeyType.ED25519_SIG_2018, did, verkey);
     const service = new Service(
       `${did};indy`,
@@ -159,10 +185,9 @@ class ConnectionService extends EventEmitter {
       0,
       'IndyAgent'
     );
-    const auth = new Authentication(publicKey);
+    const auth = new Authentication(publicKey, true);
     const didDoc = new DidDoc(did, [auth], [publicKey], [service]);
-
-    const connectionRecord = new ConnectionRecord({
+    return new ConnectionRecord({
       id,
       did,
       didDoc,
@@ -170,6 +195,42 @@ class ConnectionService extends EventEmitter {
       state: ConnectionState.INIT,
       tags: { verkey },
     });
+  }
+
+  private async createPublicDIDConnectionRecord(did: Did): Promise<ConnectionRecord> {
+    const [_, method, identifier] = did.split(':');
+    if (method != 'sov') {
+      throw new Error(`Non sovrin public DIDs are unsupported at the moment.`);
+    }
+
+    const id = uuid();
+    const verkey = this.getFullVerkey(identifier, (await this.ledgerService.getPublicDid(identifier)).verkey);
+    const endpoint = await this.ledgerService.getEndpoint(identifier);
+
+    const publicKey = new PublicKey(`${did}#1`, PublicKeyType.ED25519_SIG_2018, did, verkey);
+    const service = new Service(`${did};indy`, endpoint, [verkey], this.config.getRoutingKeys(), 0, 'IndyAgent');
+    const auth = new Authentication(publicKey, true);
+    const didDoc = new DidDoc(did, [auth], [publicKey], [service]);
+    return new ConnectionRecord({
+      id,
+      did,
+      didDoc,
+      verkey,
+      state: ConnectionState.INIT,
+      tags: { verkey },
+    });
+  }
+
+  public async updateState(connectionRecord: ConnectionRecord, newState: ConnectionState) {
+    connectionRecord.state = newState;
+    await this.connectionRepository.update(connectionRecord);
+    const { verkey, state } = connectionRecord;
+    this.emit(EventType.StateChanged, { verkey, newState: state });
+  }
+
+  private async createConnection(_did = ''): Promise<ConnectionRecord> {
+    const connectionRecord =
+      _did === '' ? await this.createPeerDIDConnection() : await this.createPublicDIDConnectionRecord(_did);
 
     await this.connectionRepository.save(connectionRecord);
     return connectionRecord;
@@ -202,6 +263,20 @@ class ConnectionService extends EventEmitter {
     }
 
     return connectionRecords.length > 0 ? connectionRecords[0] : null;
+  }
+
+  public async findByKeys(myKey: Verkey, theirKey: Verkey): Promise<ConnectionRecord | null> {
+    const connectionRecords = await this.connectionRepository.findByQuery({ verkey: myKey, theirKey });
+
+    if (connectionRecords.length > 1) {
+      throw new Error(`There is more than one connection for given key pair ${myKey} and ${theirKey}`);
+    }
+
+    if (connectionRecords.length < 1) {
+      return null;
+    }
+
+    return connectionRecords[0];
   }
 
   public async findByTheirKey(verkey: Verkey): Promise<ConnectionRecord | null> {

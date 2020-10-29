@@ -66,8 +66,6 @@ class StorageOutboundTransporter implements OutboundTransporter {
 class HTTPOutboundTransporter implements OutboundTransporter {
   public messages: { [key: string]: any } = {};
 
-  public constructor() {}
-
   public async sendMessage(outboundPackage: OutboundPackage) {
     const { connection, payload } = outboundPackage;
 

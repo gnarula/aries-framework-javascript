@@ -16,7 +16,7 @@ export class ProvisioningService {
       const provisioningRecord = await this.provisioningRepository.find(UNIQUE_PROVISIONING_ID);
       return provisioningRecord;
     } catch (error) {
-      if (error.code === '212') {
+      if (error.indyCode === 212) {
         // WalletItemNotFound
         logger.log('WalletItemNotFound');
         return null;
